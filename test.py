@@ -46,4 +46,8 @@ keyboard.wait('esc')
 
 # Очистка
 audio_queue.put(None)
+<<<<<<< HEAD
 audio_thread.join()
+=======
+audio_thread.join()
+>>>>>>> 7a757f8a5bbfd5280fd364847f81253d2da7d2ac
