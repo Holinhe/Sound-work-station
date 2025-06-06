@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sampler</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --primary-color: #007bff;
+            --text-color: #333;
+            --hover-color: #0056b3;
+            --border-radius: 8px;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .section {
+            background: var(--card-bg);
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        .section h3 {
+            margin: 0 0 15px;
+            color: var(--primary-color);
+            font-size: 1.5em;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s, transform 0.1s;
+        }
+
+        button:hover {
+            background-color: var(--hover-color);
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        input[type="file"],
+        input[type="number"],
+        input[type="text"],
+        select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+            margin: 5px;
+            width: 200px;
+        }
+
+        input[type="range"] {
+            width: 200px;
+            margin: 10px 5px;
+            accent-color: var(--primary-color);
+        }
+
+        label {
+            font-weight: 500;
+            margin-right: 10px;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #bindings {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        #bindings p {
+            margin: 5px 0;
+            font-size: 0.9em;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 10px;
+            }
+
+            input[type="file"],
+            input[type="number"],
+            input[type="text"],
+            select {
+                width: 100%;
+            }
+
+            input[type="range"] {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sampler</h1>
+        <div class="section">
+            <h3>Select Audio</h3>
+            <div class="control-group">
+                <select id="audioSelect" onchange="selectAudio()">
+                    <option value="">Select an audio file</option>
+                </select>
+            </div>
+        </div>
+        <div class="section">
+            <h3>Load Audio</h3>
+            <div class="control-group">
+                <input type="file" id="audioFile" accept=".wav">
+                <button onclick="uploadAudio()">Upload</button>
+            </div>
+        </div>
+        <div class="section">
+            <h3>Playback</h3>
+            <div class="control-group">
+                <button onclick="playAudio()">Play</button>
+                <button onclick="downloadAudio()">Download</button>
+            </div>
+        </div>
+        <div class="section">
+            <h3>Trim</h3>
+            <div class="control-group">
+                <label>Start (ms):</label>
+                <input type="number" id="startTime" value="0">
+                <label>End (ms):</label>
+                <input type="number" id="endTime" value="0">
+                <button onclick="trimAudio()">Trim</button>
+            </div>
+        </div>
+        <div class="section">
+            <h3>Reverse</h3>
+            <div class="control-group">
+                <button onclick="reverseAudio()">Reverse</button>
+            </div>
+        </div>
+        <div class="section">
+            <h3>Speed</h3>
+            <div class="slider-container">
+                <input type="range" id="speedSlider" min="50" max="200" value="100">
+                <span id="speedLabel">Speed: 1.0x</span>
+            </div>
+        </div>
+        <div class="section">
+            <h3>Pitch</h3>
+            <div class="slider-container">
+                <input type="range" id="pitchSlider" min="-12" max="12" value="0">
+                <span id="pitchLabel">Pitch: 0 semitones</span>
+            </div>
+        </div>
+        <div class="section">
+            <h3>Loop</h3>
+            <div class="control-group">
+                <label>Loop count:</label>
+                <input type="number" id="loopCount" value="1">
+                <button onclick="loopAudio()">Loop</button>
+            </div>
+        </div>
+        <div class="section">
+            <h3>Bind to Key</h3>
+            <div class="control-group">
+                <label>Key:</label>
+                <input type="text" id="keyInput" maxlength="1">
+                <button onclick="bindKey()">Bind</button>
+            </div>
+            <div id="bindings"></div>
+        </div>
+        <div class="section">
+            <h3>Concatenate</h3>
+            <div class="control-group">
+                <select id="concatAudioSelect">
+                    <option value="">Select audio to concatenate</option>
+                </select>
+                <button onclick="concatenateAudio()">Concatenate</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let sound = null;
+        let bindings = {}; // {key: {sound: Howl, audioId: string}}
+        let audioFiles = [];
+
+        function updateAudioList() {
+            fetch('/list')
+                .then(response => response.json())
+                .then(files => {
+                    audioFiles = files;
+                    const select = document.getElementById('audioSelect');
+                    const concatSelect = document.getElementById('concatAudioSelect');
+                    select.innerHTML = '<option value="">Select an audio file</option>';
+                    concatSelect.innerHTML = '<option value="">Select audio to concatenate</option>';
+                    files.forEach(file => {
+                        const option = document.createElement('option');
+                        option.value = file.id;
+                        option.textContent = file.filename;
+                        select.appendChild(option);
+                        const concatOption = document.createElement('option');
+                        concatOption.value = file.id;
+                        concatOption.textContent = file.filename;
+                        concatSelect.appendChild(concatOption);
+                    });
+                });
+        }
+
+        function selectAudio() {
+            const audioId = document.getElementById('audioSelect').value;
+            if (audioId) {
+                fetch(`/select/${audioId}`, { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        updateAudio();
+                        alert(data.message);
+                    })
+                    .catch(error => alert('Error: ' + error));
+            }
+        }
+
+        function updateAudio() {
+            if (document.getElementById('audioSelect').value) {
+                fetch('/play')
+                    .then(response => response.blob())
+                    .then(blob => {
+                        if (sound) sound.unload();
+                        sound = new Howl({ src: [URL.createObjectURL(blob)], format: ['wav'] });
+                        // Update bindings for the selected audio
+                        Object.keys(bindings).forEach(key => {
+                            if (bindings[key].audioId === document.getElementById('audioSelect').value) {
+                                bindings[key].sound = sound;
+                            }
+                        });
+                    })
+                    .catch(error => alert('Error: ' + error));
+            }
+        }
+
+        function uploadAudio() {
+            const fileInput = document.getElementById('audioFile');
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                updateAudioList();
+                document.getElementById('audioSelect').value = data.id;
+                selectAudio();
+            })
+            .catch(error => alert('Error: ' + error));
+        }
+
+        function playAudio() {
+            if (sound) sound.play();
+            else alert('No audio loaded');
+        }
+
+        function downloadAudio() {
+            const link = document.createElement('a');
+            link.href = '/download';
+            link.download = 'edited_audio.wav';
+            link.click();
+        }
+
+        function trimAudio() {
+            const start = document.getElementById('startTime').value;
+            const end = document.getElementById('endTime').value;
+            fetch('/trim', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ start, end })
+            })
+            .then(response => response.json())
+            .then(data => {
+                updateAudio();
+                alert(data.message);
+            })
+            .catch(error => alert('Error: ' + error));
+        }
+
+        function reverseAudio() {
+            fetch('/reverse', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    updateAudio();
+                    alert(data.message);
+                })
+                .catch(error => alert('Error: ' + error));
+        }
+
+        function changeSpeed() {
+            const speed = document.getElementById('speedSlider').value / 100;
+            document.getElementById('speedLabel').textContent = `Speed: ${speed.toFixed(2)}x`;
+            fetch('/speed', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ speed })
+            })
+            .then(response => response.json())
+            .then(data => {
+                updateAudio();
+                alert(data.message);
+            })
+            .catch(error => alert('Error: ' + error));
+        }
+
+        function changePitch() {
+            const semitones = document.getElementById('pitchSlider').value;
+            document.getElementById('pitchLabel').textContent = `Pitch: ${semitones} semitones`;
+            fetch('/pitch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ semitones })
+            })
+            .then(response => response.json())
+            .then(data => {
+                updateAudio();
+                alert(data.message);
+            })
+            .catch(error => alert('Error: ' + error));
+        }
+
+        function loopAudio() {
+            const count = document.getElementById('loopCount').value;
+            fetch('/loop', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ count })
+            })
+            .then(response => response.json())
+            .then(data => {
+                updateAudio();
+                alert(data.message);
+            })
+            .catch(error => alert('Error: ' + error));
+        }
+
+        function bindKey() {
+            const key = document.getElementById('keyInput').value.toLowerCase();
+            const audioId = document.getElementById('audioSelect').value;
+            if (key && audioId) {
+                fetch(`/play?id=${audioId}`)
+                    .then(response => response.blob())
+                    .then(blob => {
+                        const newSound = new Howl({ src: [URL.createObjectURL(blob)], format: ['wav'] });
+                        if (bindings[key]) {
+                            bindings[key].sound.unload(); // Unload previous sound
+                        }
+                        bindings[key] = { sound: newSound, audioId: audioId };
+                        const bindingsDiv = document.getElementById('bindings');
+                        bindingsDiv.innerHTML = ''; // Clear bindings display
+                        Object.keys(bindings).forEach(k => {
+                            const file = audioFiles.find(f => f.id === bindings[k].audioId);
+                            if (file) {
+                                bindingsDiv.innerHTML += `<p>Key '${k}' bound to ${file.filename}</p>`;
+                            }
+                        });
+                        document.getElementById('keyInput').value = '';
+                        alert(`Key '${key}' bound to ${audioFiles.find(f => f.id === audioId).filename}`);
+                    })
+                    .catch(error => alert('Error binding key: ' + error));
+            } else {
+                alert('Select an audio and enter a key');
+            }
+        }
+
+        document.addEventListener('keydown', (event) => {
+            const key = event.key.toLowerCase();
+            if (bindings[key]) {
+                bindings[key].sound.play();
+            }
+        });
+
+        function concatenateAudio() {
+            const secondAudioId = document.getElementById('concatAudioSelect').value;
+            if (secondAudioId) {
+                fetch('/concatenate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ second_audio_id: secondAudioId })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    updateAudio();
+                    alert(data.message);
+                })
+                .catch(error => alert('Error: ' + error));
+            } else {
+                alert('Select an audio to concatenate');
+            }
+        }
+
+        // Update slider labels in real-time and apply changes
+        document.getElementById('speedSlider').addEventListener('input', () => {
+            const speed = document.getElementById('speedSlider').value / 100;
+            document.getElementById('speedLabel').textContent = `Speed: ${speed.toFixed(2)}x`;
+            changeSpeed();
+        });
+
+        document.getElementById('pitchSlider').addEventListener('input', () => {
+            const semitones = document.getElementById('pitchSlider').value;
+            document.getElementById('pitchLabel').textContent = `Pitch: ${semitones} semitones`;
+            changePitch();
+        });
+
+        // Initialize audio list
+        updateAudioList();
+    </script>
+</body>
+</html>
